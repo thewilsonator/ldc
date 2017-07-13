@@ -499,8 +499,8 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
 }
 
 static int showInstrProfile(const std::string &Filename, bool ShowCounts,
-                            bool ShowIndirectCallTargets, bool ShowMemOPSizes,
-                            bool ShowDetailedSummary,
+                            uint32_t TopN, bool ShowIndirectCallTargets,
+                            bool ShowMemOPSizes, bool ShowDetailedSummary,
                             std::vector<uint32_t> DetailedSummaryCutoffs,
                             bool ShowAllFunctions,
                             const std::string &ShowFunction, bool TextFormat,
@@ -519,6 +519,14 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   size_t ShownFunctions = 0;
   int NumVPKind = IPVK_Last - IPVK_First + 1;
   std::vector<ValueSitesStats> VPStats(NumVPKind);
+
+  std::vector<std::pair<std::string, uint64_t>> HottestFuncs;
+  auto MinCmp = [](const std::pair<std::string, uint64_t> &v1,
+                   const std::pair<std::string, uint64_t> &v2) {
+    return v1.second > v2.second;
+  };
+  std::make_heap(HottestFuncs.begin(), HottestFuncs.end(), MinCmp);
+
   for (const auto &Func : *Reader) {
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
@@ -528,12 +536,31 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
     if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
-      InstrProfWriter::writeRecordInText(Func, Symtab, OS);
+      InstrProfWriter::writeRecordInText(Func.Name, Func.Hash, Func, Symtab,
+                                         OS);
       continue;
     }
 
     assert(Func.Counts.size() > 0 && "function missing entry counter");
     Builder.addRecord(Func);
+
+    if (TopN) {
+      uint64_t FuncMax = 0;
+      for (size_t I = 0, E = Func.Counts.size(); I < E; ++I)
+        FuncMax = std::max(FuncMax, Func.Counts[I]);
+
+      if (HottestFuncs.size() == TopN) {
+        if (HottestFuncs.front().second < FuncMax) {
+          pop_heap(HottestFuncs.begin(), HottestFuncs.end(), MinCmp);
+          HottestFuncs.pop_back();
+          HottestFuncs.emplace_back(
+              std::make_pair(std::string(Func.Name), FuncMax));
+          push_heap(HottestFuncs.begin(), HottestFuncs.end(), MinCmp);
+        }
+      } else
+        HottestFuncs.emplace_back(
+            std::make_pair(std::string(Func.Name), FuncMax));
+    }
 
     if (Show) {
 
@@ -591,6 +618,15 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   OS << "Total functions: " << PS->getNumFunctions() << "\n";
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
+
+  if (TopN) {
+    std::sort(HottestFuncs.begin(), HottestFuncs.end(), MinCmp);
+
+    OS << "Top " << TopN
+       << " functions with the largest internal block counts: \n";
+    for (auto hotfunc : HottestFuncs)
+      OS << "  " << hotfunc.first << ", max count = " << hotfunc.second << "\n";
+  }
 
   if (ShownFunctions && ShowIndirectCallTargets) {
     OS << "Statistics for indirect call sites profile:\n";
@@ -675,6 +711,9 @@ static int show_main(int argc, const char *argv[]) {
       cl::desc("Profile kind:"), cl::init(instr),
       cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
                  clEnumVal(sample, "Sample profile")));
+  cl::opt<uint32_t> TopNFunctions(
+      "topn", cl::init(0),
+      cl::desc("Show the list of functions with the largest internal counts"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
@@ -692,10 +731,10 @@ static int show_main(int argc, const char *argv[]) {
   std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs.begin(),
                                 DetailedSummaryCutoffs.end());
   if (ProfileKind == instr)
-    return showInstrProfile(Filename, ShowCounts, ShowIndirectCallTargets,
-                            ShowMemOPSizes, ShowDetailedSummary,
-                            DetailedSummaryCutoffs, ShowAllFunctions,
-                            ShowFunction, TextFormat, OS);
+    return showInstrProfile(Filename, ShowCounts, TopNFunctions,
+                            ShowIndirectCallTargets, ShowMemOPSizes,
+                            ShowDetailedSummary, DetailedSummaryCutoffs,
+                            ShowAllFunctions, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowFunction, OS);

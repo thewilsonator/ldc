@@ -11,10 +11,13 @@
 
 #include "gen/dcompute/target.h"
 #include "gen/dcompute/druntime.h"
+#include "gen/metadata.h"
 #include "dmd/template.h"
 #include "gen/abi-spirv.h"
 #include "gen/logger.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "driver/targetmachine.h"
 #include "id.h"
 #include <cstring>
 #include <string>
@@ -44,12 +47,22 @@ public:
                        // address. For OpenCL this is a no-op.
                        {{0, 1, 2, 3, 4}}) {
 
+    const bool is64 = global.params.is64bit;
+    auto tripleString = is64 ? "nvptx64-nvidia-cuda" : "nvptx-nvidia-cuda";
+
+
+    auto floatABI = ::FloatABI::Hard;
+    targetMachine = createTargetMachine(
+        tripleString, is64 ? "spirv64" : "spirv32",
+        "", {},
+        is64 ? ExplicitBitness::M64 : ExplicitBitness::M32, floatABI,
+        llvm::Reloc::Static, llvm::CodeModel::Medium, llvm::CodeGenOpt::None, false);
     _ir = new IRState("dcomputeTargetOCL", ctx);
     _ir->module.setTargetTriple(global.params.is64bit ? SPIR_TARGETTRIPLE64
                                                       : SPIR_TARGETTRIPLE32);
 
-    _ir->module.setDataLayout(global.params.is64bit ? SPIR_DATALAYOUT64
-                                                    : SPIR_DATALAYOUT32);
+    _ir->module.setDataLayout(is64 ? SPIR_DATALAYOUT64
+                                   : SPIR_DATALAYOUT32);
     _ir->dcomputetarget = this;
   }
 

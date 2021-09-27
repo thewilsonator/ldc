@@ -174,8 +174,30 @@ public:
     if (v->type->ty == TY::Tstruct &&
         (ptr = toDcomputePointer(static_cast<TypeStruct *>(v->type)->sym))) {
       addrspace = ptr->addrspace;
-      tyName = basicTypeToString(ptr->type) + "*";
-      baseTyName = tyName;
+      tyName = basicTypeToString(ptr->type);
+
+      auto sd = ptr->type->isTypeStruct();
+      auto mod = sd ? sd->sym->getModule() : nullptr;
+      if (mod && mod->md && mod->md->id == Id::opencl) {
+        // TODO: Pipes
+        auto name = std::string(sd->toChars());
+        if (!usedImage && name.rfind("ldc.opencl.image",0) == 0)
+          usedImage = true;
+        // parse access qualifiers from ldc.opencl.*_XX_t types like ldc.opencl.image1d_ro_t
+        // 4 == length of "XX_t"
+        name = name.substr(name.length()-4, 2);
+        if (name == "ro")
+          accessQual = "read_only";
+        else if (name == "wo")
+          accessQual = "write_only";
+        else if (name == "rw")
+          accessQual = "read_write";
+        // opencl.sampler_t does not get an access qualifier
+      } else {
+        // things like e.g. GlobalPointer!opencl.image1d_[ro,wo,rw]_t/sampler_t must not have the additional *
+        // but all others e.g. GlobalPointer!int must
+        tyName += "*";
+      }
       // there is no volatile or restrict (yet) in D
       typeQuals = mod2str(ptr->type->mod);
       // TODO: Images and Pipes They are global pointers to opaques

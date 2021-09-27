@@ -56,6 +56,11 @@ IrTypeStruct *IrTypeStruct::get(StructDeclaration *sd) {
 
   // if it's a forward declaration, all bets are off, stick with the opaque
   if (sd->sizeok != Sizeok::done) {
+    // but rewrite the name for special OpenCL types
+    if (isFromLDC_OpenCL(sd)) {
+      const int prefixlen = 4; // == sizeof("ldc.")
+      t->type = LLStructType::create(gIR->context(), sd->toPrettyChars()+prefixlen);
+    }
     return t;
   }
 

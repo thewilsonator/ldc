@@ -40,6 +40,7 @@ DString fromPathString(const cl::opt<std::string> &src) {
   return {0, nullptr};
 }
 
+MultiSetter::MultiSetter() { }
 MultiSetter::MultiSetter(bool invert, CHECKENABLE *p, ...) {
   this->invert = invert;
   if (p) {

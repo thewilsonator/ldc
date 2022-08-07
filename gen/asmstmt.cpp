@@ -719,7 +719,7 @@ void CompoundAsmStatement_toIR(CompoundAsmStatement *stmt, IRState *p) {
 
   llvm::InlineAsm *ia = llvm::InlineAsm::get(fty, code, out_c, true);
 
-  auto call = p->createInlineAsmCall(stmt->loc, ia, args);
+  auto call = p->createInlineAsmCall(stmt->loc, ia, args, types);
   if (!retty->isVoidTy()) {
     call->setName("asm");
   }
@@ -732,7 +732,7 @@ void CompoundAsmStatement_toIR(CompoundAsmStatement *stmt, IRState *p) {
     if (block->retfixup) {
       block->asmBlock->abiret = (*block->retfixup)(p->ir, call);
     } else if (p->asmBlock->retemu) {
-      block->asmBlock->abiret = DtoLoad(block->asmBlock->abiret);
+      //block->asmBlock->abiret = DtoLoad(block->asmBlock->abiret); //FIXME
     } else {
       block->asmBlock->abiret = call;
     }
@@ -747,7 +747,7 @@ void CompoundAsmStatement_toIR(CompoundAsmStatement *stmt, IRState *p) {
     // make new blocks
     llvm::BasicBlock *bb = p->insertBB("afterasmgotoforwarder");
 
-    auto val = DtoLoad(jump_target, "__llvm_jump_target_value");
+    auto val = DtoLoad(llvm::Type::getInt32Ty(gIR->context()), jump_target, "__llvm_jump_target_value");
     llvm::SwitchInst *sw = p->ir->CreateSwitch(val, bb, gotoToVal.size());
 
     // add all cases

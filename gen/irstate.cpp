@@ -264,7 +264,8 @@ void IRState::addLinkerDependentLib(llvm::StringRef libraryName) {
 
 llvm::CallInst *
 IRState::createInlineAsmCall(const Loc &loc, llvm::InlineAsm *ia,
-                             llvm::ArrayRef<llvm::Value *> args) {
+                             llvm::ArrayRef<llvm::Value *> args,
+                             llvm::ArrayRef<llvm::Type *> types) {
   llvm::CallInst *call = ir->CreateCall(ia, args);
   addInlineAsmSrcLoc(loc, call);
 
@@ -276,7 +277,7 @@ IRState::createInlineAsmCall(const Loc &loc, llvm::InlineAsm *ia,
     if (constraintInfo.isIndirect) {
       call->addParamAttr(i, llvm::Attribute::get(context(),
                                                  llvm::Attribute::ElementType,
-                                                 getPointeeType(args[i])));
+                                                 types[i]));
     }
     ++i;
   }

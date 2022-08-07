@@ -86,8 +86,9 @@ llvm::Function *buildForwarderFunction(
   // ... incrementing the gate variables.
   for (auto gate : gates) {
     assert(getIrGlobal(gate));
-    const auto val = getIrGlobal(gate)->value;
-    const auto rval = builder.CreateLoad(getPointeeType(val), val, "vgate");
+    const auto ir = getIrGlobal(gate);
+    const auto val = ir->value;
+    const auto rval = builder.CreateLoad(ir->getType(), val, "vgate");
     const auto res = builder.CreateAdd(rval, DtoConstUint(1), "vgate");
     builder.CreateStore(res, val);
   }

@@ -295,7 +295,8 @@ inline llvm::Value *DtoLVal(Expression *e) { return DtoLVal(toElem(e)); }
 /// If the storage is not given explicitly, the declaration is expected to be
 /// already resolved, and the value from the associated IrVar will be used.
 DValue *makeVarDValue(Type *type, VarDeclaration *vd,
-                      llvm::Value *storage = nullptr);
+                      llvm::Value *storage = nullptr,
+                      llvm::Type *lltype = nullptr);
 
 /// Checks whether the rhs expression is able to construct the lhs lvalue
 /// directly in-place. If so, it performs the according codegen and returns

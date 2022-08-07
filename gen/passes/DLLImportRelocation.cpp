@@ -182,6 +182,7 @@ private:
 
   void appendToCRTConstructor(GlobalVariable *importedVar,
                               Constant *originalInitializer) {
+#if LDC_LLVM_VER < 1500 // TODO
     if (!ctor)
       createCRTConstructor();
 
@@ -232,6 +233,7 @@ private:
     b.SetInsertPoint(ifbb);
     b.CreateStore(value, address);
     b.CreateBr(endbb);
+#endif
   }
 
   static Constant *skipOverCast(Constant *value) {

@@ -58,6 +58,7 @@ struct IrFunction {
   llvm::Value *thisArg = nullptr; // class/struct 'this' arg
   llvm::Value *nestArg = nullptr; // nested function 'this' arg
 
+  llvm::Value *loadThis() const;
   llvm::StructType *frameType = nullptr; // type of nested context
   unsigned frameTypeAlignment = 0;       // its alignment
   // number of enclosing functions with variables accessed by nested functions

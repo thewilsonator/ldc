@@ -83,6 +83,13 @@ bool IrFunction::isDynamicCompiled() const {
   return dynamicCompile || dynamicCompileEmit;
 }
 
+llvm::Value *IrFunction::loadThis() const {
+  AggregateDeclaration *ad = decl->isMember2();
+  assert(ad);
+  return ad->isClassDeclaration()
+    ? DtoLoad(frameType, thisArg)
+    : thisArg;
+}
 IrFunction *getIrFunc(FuncDeclaration *decl, bool create) {
   if (!isIrFuncCreated(decl) && create) {
     assert(decl->ir->irFunc == NULL);

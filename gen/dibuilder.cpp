@@ -546,8 +546,8 @@ DIType DIBuilder::CreateCompositeType(Type *t) {
   // Use the actual type associated with the declaration, ignoring any
   // const/wrappers.
   LLType *T = DtoType(ad->type);
-  if (t->ty == TY::Tclass)
-    T = T->getPointerElementType();
+    if (t->ty == TY::Tclass) {} // FIXME
+    //T = T->getPointerElementType();
   IrAggr *irAggr = getIrAggr(ad, true);
 
   if (irAggr->diCompositeType) {

@@ -105,13 +105,13 @@ DValue *DtoNewClass(const Loc &loc, TypeClass *tc, NewExp *newexp) {
     LOG_SCOPE;
     unsigned idx = getFieldGEPIndex(tc->sym, tc->sym->vthis);
     LLValue *src = DtoRVal(newexp->thisexp);
-    LLValue *dst = DtoGEP(mem, 0, idx);
+    LLValue *dst = DtoGEP(mem, getVoidPtrType(), 0, idx);
     IF_LOG Logger::cout() << "dst: " << *dst << "\nsrc: " << *src << '\n';
     DtoStore(src, DtoBitCast(dst, getPtrToType(src->getType())));
   }
   // set the context for nested classes
   else if (tc->sym->isNested() && tc->sym->vthis) {
-    DtoResolveNestedContext(loc, tc->sym, mem);
+    DtoResolveNestedContext(loc, tc->sym, mem, getVoidPtrType());
   }
 
   // call constructor
@@ -143,7 +143,7 @@ void DtoInitClass(TypeClass *tc, LLValue *dst) {
   IrClass *irClass = getIrAggr(tc->sym);
 
   // Set vtable field. Doing this seperately might be optimized better.
-  LLValue *tmp = DtoGEP(dst, 0u, 0, "vtbl");
+  LLValue *tmp = DtoGEP(dst, getVoidPtrType(), 0u, 0, "vtbl");
   LLValue *val =
       DtoBitCast(irClass->getVtblSymbol(), tmp->getType()->getContainedType(0));
   DtoStore(val, tmp);
@@ -151,7 +151,7 @@ void DtoInitClass(TypeClass *tc, LLValue *dst) {
   // For D classes, set the monitor field to null.
   const bool isCPPclass = tc->sym->isCPPclass() ? true : false;
   if (!isCPPclass) {
-    tmp = DtoGEP(dst, 0, 1, "monitor");
+    tmp = DtoGEP(dst, getVoidPtrType(), 0, 1, "monitor");
     val = LLConstant::getNullValue(tmp->getType()->getContainedType(0));
     DtoStore(val, tmp);
   }
@@ -164,12 +164,12 @@ void DtoInitClass(TypeClass *tc, LLValue *dst) {
     return;
   }
 
-  LLValue *dstarr = DtoGEP(dst, 0, firstDataIdx);
+  LLValue *dstarr = DtoGEP(dst, getVoidPtrType(), 0, firstDataIdx);
 
   // init symbols might not have valid types
   LLValue *initsym = irClass->getInitSymbol();
   initsym = DtoBitCast(initsym, DtoType(tc));
-  LLValue *srcarr = DtoGEP(initsym, 0, firstDataIdx);
+  LLValue *srcarr = DtoGEP(initsym, DtoType(tc), 0, firstDataIdx);
 
   DtoMemCpy(dstarr, srcarr, DtoConstSize_t(dataBytes));
 }
@@ -198,7 +198,7 @@ void DtoFinalizeScopeClass(const Loc &loc, LLValue *inst, bool hasDtor) {
   llvm::BasicBlock *ifbb = gIR->insertBB("if");
   llvm::BasicBlock *endbb = gIR->insertBBAfter(ifbb, "endif");
 
-  const auto monitor = DtoLoad(DtoGEP(inst, 0, 1), ".monitor");
+  const auto monitor = DtoLoad(getVoidPtrType(), DtoGEP(inst, getVoidPtrType(), 0, 1), ".monitor");
   const auto hasMonitor =
       gIR->ir->CreateICmp(llvm::CmpInst::ICMP_NE, monitor,
                           getNullValue(monitor->getType()), ".hasMonitor");
@@ -280,7 +280,7 @@ DValue *DtoCastClass(const Loc &loc, DValue *val, Type *_to) {
     if (offset != 0) {
       assert(offset > 0);
       v = DtoBitCast(v, getVoidPtrType());
-      v = DtoGEP1(v, DtoConstUint(offset));
+      v = DtoGEP1(v, getVoidPtrType(), DtoConstUint(offset));
     }
     IF_LOG {
       Logger::cout() << "V = " << *v << std::endl;
@@ -417,15 +417,15 @@ LLValue *DtoVirtualFunctionPointer(DValue *inst, FuncDeclaration *fdecl) {
 
   LLValue *funcval = vthis;
   // get the vtbl for objects
-  funcval = DtoGEP(funcval, 0u, 0);
+  funcval = DtoGEP(funcval, getVoidPtrType(), 0u, 0);
   // load vtbl ptr
-  funcval = DtoLoad(funcval);
+  funcval = DtoLoad(getVoidPtrType(), funcval);
   // index vtbl
   const std::string name = fdecl->toChars();
   const auto vtblname = name + "@vtbl";
-  funcval = DtoGEP(funcval, 0, fdecl->vtblIndex, vtblname.c_str());
+  funcval = DtoGEP(funcval, getVoidPtrType(), 0, fdecl->vtblIndex, vtblname.c_str());
   // load opaque pointer
-  funcval = DtoAlignedLoad(funcval);
+  funcval = DtoAlignedLoad(getVoidPtrType(), funcval);
 
   IF_LOG Logger::cout() << "funcval: " << *funcval << '\n';
 

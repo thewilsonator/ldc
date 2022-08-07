@@ -132,14 +132,15 @@ struct BaseBitcastABIRewrite : ABIRewrite {
     const unsigned alignment = getMaxAlignment(asType, dv->type);
     const char *name = ".BaseBitcastABIRewrite_arg";
 
-    if (!dv->isLVal()) {
+    DLValue * ldv = dv->isLVal();
+    if (!ldv) {
       LLValue *dump = DtoAllocaDump(dv, asType, alignment,
                                     ".BaseBitcastABIRewrite_arg_storage");
-      return DtoLoad(dump, name);
+      return DtoLoad(asType, dump, name);
     }
 
-    LLValue *address = DtoLVal(dv);
-    LLType *pointeeType = address->getType()->getPointerElementType();
+    LLValue *address = DtoLVal(ldv);
+    LLType *pointeeType = ldv->memoryType();
 
     if (getTypeStoreSize(asType) > getTypeAllocSize(pointeeType) ||
         alignment > DtoAlignment(dv->type)) {
@@ -148,11 +149,11 @@ struct BaseBitcastABIRewrite : ABIRewrite {
           asType, alignment, ".BaseBitcastABIRewrite_padded_arg_storage");
       DtoMemCpy(paddedDump, address,
                 DtoConstSize_t(getTypeAllocSize(pointeeType)));
-      return DtoLoad(paddedDump, name);
+      return DtoLoad(asType, paddedDump, name);
     }
 
     address = DtoBitCast(address, getPtrToType(asType));
-    return DtoLoad(address, name);
+    return DtoLoad(asType, address, name);
   }
 
   LLValue *getLVal(Type *dty, LLValue *v) override {

@@ -181,12 +181,15 @@ static void addGarbageCollect2StackPass(const PassManagerBuilder &builder,
 
 static void addAddressSanitizerPasses(const PassManagerBuilder &Builder,
                                       PassManagerBase &PM) {
+#if LDC_LLVM_VER < 1500
   PM.add(createAddressSanitizerFunctionPass());
   PM.add(createModuleAddressSanitizerLegacyPassPass());
+#endif
 }
 
 static void addMemorySanitizerPass(const PassManagerBuilder &Builder,
                                    PassManagerBase &PM) {
+#if LDC_LLVM_VER < 1500
   int trackOrigins = fSanitizeMemoryTrackOrigins;
   bool recover = false;
   bool kernel = false;
@@ -204,15 +207,19 @@ static void addMemorySanitizerPass(const PassManagerBuilder &Builder,
     PM.add(createInstructionCombiningPass());
     PM.add(createDeadStoreEliminationPass());
   }
+#endif
 }
 
 static void addThreadSanitizerPass(const PassManagerBuilder &Builder,
                                    PassManagerBase &PM) {
+#if LDC_LLVM_VER < 1500
   PM.add(createThreadSanitizerLegacyPassPass());
+#endif
 }
 
 static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
                                      legacy::PassManagerBase &PM) {
+#if LDC_LLVM_VER < 1500
 #if LDC_LLVM_VER >= 1000
   PM.add(createModuleSanitizerCoverageLegacyPassPass(
       opts::getSanitizerCoverageOptions()));
@@ -220,11 +227,13 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
   PM.add(
       createSanitizerCoverageModulePass(opts::getSanitizerCoverageOptions()));
 #endif
+#endif
 }
 
 // Adds PGO instrumentation generation and use passes.
 static void addPGOPasses(PassManagerBuilder &builder,
                          legacy::PassManagerBase &mpm, unsigned optLevel) {
+#if LDC_LLVM_VER < 1500
   if (opts::isInstrumentingForASTBasedPGO()) {
     InstrProfOptions options;
     options.NoRedZone = global.params.disableRedZone;
@@ -243,6 +252,7 @@ static void addPGOPasses(PassManagerBuilder &builder,
   } else if (opts::isUsingIRBasedPGOProfile()) {
     builder.PGOInstrUse = global.params.datafileInstrProf;
   }
+#endif
 }
 
 /**
@@ -262,8 +272,10 @@ static void addOptimizationPasses(legacy::PassManagerBase &mpm,
   PassManagerBuilder builder;
   builder.OptLevel = optLevel;
   builder.SizeLevel = sizeLevel;
+#if LDC_LLVM_VER < 1500
   builder.PrepareForLTO = opts::isUsingLTO();
   builder.PrepareForThinLTO = opts::isUsingThinLTO();
+#endif
 
   if (willInline()) {
     auto params = llvm::getInlineParams(optLevel, sizeLevel);

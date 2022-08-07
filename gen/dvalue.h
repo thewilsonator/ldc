@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "gen/tollvm.h"
 class Type;
 class Dsymbol;
 class VarDeclaration;
@@ -157,6 +158,7 @@ public:
   virtual DLValue *getLVal() { return this; }
 
   DLValue *isLVal() override { return this; }
+  llvm::Type *memoryType() { return DtoType(type); }
 
 protected:
   DLValue(llvm::Value *v, Type *t) : DValue(t, v) {}

@@ -131,7 +131,7 @@ DRValue *DLValue::getRVal() {
     return nullptr;
   }
 
-  LLValue *rval = DtoLoad(val);
+  LLValue *rval = DtoLoad(memoryType(),val);
 
   const auto ty = type->toBasetype()->ty;
   if (ty == TY::Tbool) {
@@ -161,7 +161,9 @@ DSpecialRefValue::DSpecialRefValue(Type *t, LLValue *v) : DLValue(v, t) {
 }
 
 DRValue *DSpecialRefValue::getRVal() {
-  return DLValue(type, DtoLoad(val)).getRVal();
+  return DLValue(type, DtoLoad(DtoType(type), val)).getRVal();
 }
 
-DLValue *DSpecialRefValue::getLVal() { return new DLValue(type, DtoLoad(val)); }
+DLValue *DSpecialRefValue::getLVal() {
+  return new DLValue(type, DtoLoad(DtoType(type), val));
+}

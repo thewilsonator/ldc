@@ -83,7 +83,7 @@ void TryCatchScope::emitCatchBodies(IRState &irs, llvm::Value *ehPtrSlot) {
     const auto enterCatchFn = getRuntimeFunction(
         c->loc, irs.module,
         isCPPclass ? "__cxa_begin_catch" : "_d_eh_enter_catch");
-    const auto ptr = DtoLoad(ehPtrSlot);
+    const auto ptr = DtoLoad(getVoidPtrType(), ehPtrSlot);
     const auto throwableObj = irs.ir->CreateCall(enterCatchFn, ptr);
 
     // For catches that use the Throwable object, create storage for it.
@@ -202,6 +202,7 @@ void emitBeginCatchMSVC(IRState &irs, Catch *ctch,
   // This needs a series of catch pads to match the exception
   // and the catch handler must be terminated by a catch return instruction
   LLValue *exnObj = nullptr;
+  LLType  *exnObjType = nullptr;
   LLValue *cpyObj = nullptr;
   LLValue *typeDesc = nullptr;
   LLValue *clssInfo = nullptr;
@@ -224,10 +225,12 @@ void emitBeginCatchMSVC(IRState &irs, Catch *ctch,
       // when caught
       cpyObj = exnObj;
       exnObj = DtoAlloca(var->type, "exnObj");
+      exnObjType = DtoType(var->type);
     }
   } else if (ctch->type) {
     // catch without var
     exnObj = DtoAlloca(ctch->type, "exnObj");
+    exnObjType = DtoType(ctch->type);
   } else {
     // catch all
     exnObj = LLConstant::getNullValue(getVoidPtrType());
@@ -255,7 +258,7 @@ void emitBeginCatchMSVC(IRState &irs, Catch *ctch,
 
   if (cpyObj) {
     // assign the caught exception to the location in the closure
-    auto val = irs.ir->CreateLoad(getPointeeType(exnObj), exnObj);
+    auto val = irs.ir->CreateLoad(exnObjType, exnObj);
     irs.ir->CreateStore(val, cpyObj);
     exnObj = cpyObj;
   }
@@ -778,7 +781,7 @@ llvm::BasicBlock *TryCatchFinallyScopes::getOrCreateResumeUnwindBlock() {
     irs.ir->SetInsertPoint(resumeUnwindBlock);
 
     llvm::Function *resumeFn = getUnwindResumeFunction(Loc(), irs.module);
-    irs.ir->CreateCall(resumeFn, DtoLoad(getOrCreateEhPtrSlot()));
+    irs.ir->CreateCall(resumeFn, DtoLoad(resumeFn->getType(), getOrCreateEhPtrSlot()));
     irs.ir->CreateUnreachable();
 
     irs.ir->SetInsertPoint(oldBB);

@@ -153,11 +153,11 @@ private:
 class MultiSetter {
   std::vector<CHECKENABLE *> locations;
   bool invert;
-  explicit MultiSetter(bool); // not implemented, disable auto-conversion
+  //explicit MultiSetter(bool); // not implemented, disable auto-conversion
 public:
   // end with a nullptr
   MultiSetter(bool invert, CHECKENABLE *p, ...);
-
+  MultiSetter();
   void operator=(bool val);
 };
 

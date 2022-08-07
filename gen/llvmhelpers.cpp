@@ -232,12 +232,12 @@ LLValue *DtoAllocaDump(DValue *val, Type *asType, const char *name) {
 
 LLValue *DtoAllocaDump(DValue *val, LLType *asType, int alignment,
                        const char *name) {
-  if (val->isLVal()) {
+  if (DLValue * dlval = val->isLVal()) {
     LLValue *lval = DtoLVal(val);
     LLType *asMemType = i1ToI8(voidToI8(asType));
     LLValue *copy = DtoRawAlloca(asMemType, alignment, name);
     const auto minSize =
-        std::min(getTypeAllocSize(lval->getType()->getPointerElementType()),
+        std::min(getTypeAllocSize(dlval->memoryType()),
                  getTypeAllocSize(asMemType));
     const auto minAlignment =
         std::min(DtoAlignment(val->type), static_cast<unsigned>(alignment));
@@ -1900,7 +1900,7 @@ LLValue *DtoIndexAggregate(LLValue *src, AggregateDeclaration *ad,
     assert(fieldIndex == 0);
     // Cast to void* to apply byte-wise offset from object start.
     val = DtoBitCast(val, getVoidPtrType());
-    val = DtoGEP1(val, byteOffset);
+    val = DtoGEP1(val, getVoidPtrType(), byteOffset);
   } else {
     if (ad->structsize == 0) { // can happen for extern(C) structs
       assert(fieldIndex == 0);
@@ -1912,7 +1912,7 @@ LLValue *DtoIndexAggregate(LLValue *src, AggregateDeclaration *ad,
         st = getPtrToType(st);
       }
       val = DtoBitCast(val, st);
-      val = DtoGEP(val, 0, fieldIndex);
+      val = DtoGEP(val, st, 0, fieldIndex);
     }
   }
 
@@ -1933,11 +1933,12 @@ unsigned getFieldGEPIndex(AggregateDeclaration *ad, VarDeclaration *vd) {
   return fieldIndex;
 }
 
-DValue *makeVarDValue(Type *type, VarDeclaration *vd, llvm::Value *storage) {
+DValue *makeVarDValue(Type *type, VarDeclaration *vd, llvm::Value *storage, llvm::Type * lltype) {
   auto val = storage;
   if (!val) {
     assert(isIrVarCreated(vd) && "Variable not resolved.");
     val = getIrValue(vd);
+    lltype = getIrType(vd->type)->getLLType();
   }
 
   // We might need to cast.
@@ -1952,13 +1953,13 @@ DValue *makeVarDValue(Type *type, VarDeclaration *vd, llvm::Value *storage) {
     assert(vd->isDataseg() || (vd->storage_class & STCextern) ||
            type->toBasetype()->ty == TY::Tclass ||
            type->toBasetype()->ty == TY::Tsarray);
-    llvm::Type *pointeeType = val->getType()->getPointerElementType();
+    /*llvm::Type *pointeeType = val->getType()->getPointerElementType();
     if (isSpecialRef)
       pointeeType = pointeeType->getPointerElementType();
     // Make sure that the type sizes fit - '==' instead of '<=' should probably
     // work as well.
     assert(getTypeStoreSize(DtoType(type)) <= getTypeStoreSize(pointeeType) &&
-           "LValue type mismatch, encountered type too small.");
+           "LValue type mismatch, encountered type too small.");*/
     val = DtoBitCast(val, expectedType);
   }
 

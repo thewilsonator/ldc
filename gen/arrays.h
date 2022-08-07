@@ -20,6 +20,7 @@ class ArrayInitializer;
 class ArrayLiteralExp;
 class DSliceValue;
 class DValue;
+class DLValue;
 class Expression;
 struct IRState;
 struct Loc;
@@ -57,7 +58,7 @@ void initializeArrayLiteral(IRState *p, ArrayLiteralExp *ale, LLValue *dstMem);
 
 void DtoArrayAssign(const Loc &loc, DValue *lhs, DValue *rhs, EXP op,
                     bool canSkipPostblit);
-void DtoSetArrayToNull(LLValue *v);
+void DtoSetArrayToNull(DLValue *v);
 
 DSliceValue *DtoNewDynArray(const Loc &loc, Type *arrayType, DValue *dim,
                             bool defaultInit = true);

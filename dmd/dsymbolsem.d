@@ -1711,7 +1711,7 @@ version (IN_LLVM)
             }
             return se;
         }
-        void declarations()
+        void declarations(bool skipCodegen = false)
         {
             if (!pd.decl)
                 return;
@@ -1729,7 +1729,13 @@ version (IN_LLVM)
                     s.dsymbolSemantic(sc2);
                     continue;
                 }
-
+                if (pd.ident == Id.ctfe)
+                {
+                    if (auto fd = s.isFuncDeclaration())
+                    {
+                        fd.skipCodegen = skipCodegen;
+                    }
+                }
                 s.dsymbolSemantic(sc2);
                 if (pd.ident != Id.mangle)
                 {
@@ -1892,6 +1898,12 @@ else // !IN_LLVM
             // this pragma now gets evaluated on demand in function semantic
 
             return declarations();
+        }
+        else if (pd.ident == Id.ctfe)
+        {
+            bool skipCodegen;
+            pragmaCtfeSemanitc(pd.loc, sc, pd.args, skipCodegen);
+            return declarations(skipCodegen);
         }
         else if (pd.ident == Id.mangle)
         {

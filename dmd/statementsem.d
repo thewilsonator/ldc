@@ -1844,6 +1844,21 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
                 return setError();
             }
         }
+        else if (ps.ident == Id.ctfe)
+        {
+            if (auto fd = sc.func)
+            {
+                bool skipCodegen;
+                if (!pragmaCtfeSemanitc(ps.loc, sc, ps.args, skipCodegen))
+                    return setError();
+                fd.skipCodegen = skipCodegen;
+            }
+            else
+            {
+                ps.error("`pragma(__ctfe)` is not inside a function");
+                return setError();
+            }
+        }
         else if (!global.params.ignoreUnsupportedPragmas)
         {
             ps.error("unrecognized `pragma(%s)`", ps.ident.toChars());
@@ -5031,6 +5046,44 @@ private void debugThrowWalker(Statement s)
 
     scope walker = new DebugWalker();
     s.accept(walker);
+}
+
+bool pragmaCtfeSemanitc(Loc loc, Scope* sc, Expressions *args, out bool skipCodegen)
+{
+    if (!args)
+    {
+        skipCodegen = true;
+        return true;
+    }
+    if (args.length != 1)
+    {
+        .error(loc, "one `bool` argument expected for `__ctfe`");
+        skipCodegen = true;
+        return false;
+    }
+    Expression e = (*args)[0];
+    sc = sc.startCTFE();
+    e = e.expressionSemantic(sc);
+    e = resolveProperties(sc, e);
+    sc = sc.endCTFE();
+
+    e = e.ctfeInterpret();
+    if (!e)
+    {
+        skipCodegen = true;
+        return false;
+    }
+    (*args)[0] = e;
+    auto opt = e.toBool();
+    if (opt.isEmpty())
+    {
+        .error(loc, "one `bool` argument expected for `__ctfe`");
+        skipCodegen = true;
+        return false;
+    }
+    skipCodegen = opt.get();
+    return true;
+    
 }
 
 /***********************************************************

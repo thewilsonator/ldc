@@ -517,6 +517,13 @@ static void buildRuntimeModule() {
                                   llvm::Attribute::NoUnwind),
       Attr_ReadOnly_NoUnwind(Attr_ReadOnly, LLAttributeList::FunctionIndex,
                              llvm::Attribute::NoUnwind),
+#if LDC_LLVM_VER >= 2100
+      Attr_ReadOnly_1_3_NoCapture(Attr_ReadOnly),
+      Attr_ReadOnly_NoUnwind_1_2_NoCapture(Attr_NoUnwind),
+      Attr_1_2_NoCapture(NoAttrs),
+      Attr_1_3_NoCapture(NoAttrs),
+      Attr_1_4_NoCapture(NoAttrs);
+#else
       Attr_ReadOnly_1_NoCapture(Attr_ReadOnly, LLAttributeList::FirstArgIndex,
                                 llvm::Attribute::NoCapture),
       Attr_ReadOnly_1_3_NoCapture(Attr_ReadOnly_1_NoCapture,
@@ -536,7 +543,7 @@ static void buildRuntimeModule() {
                          llvm::Attribute::NoCapture),
       Attr_1_4_NoCapture(Attr_1_NoCapture, LLAttributeList::FirstArgIndex + 3,
                          llvm::Attribute::NoCapture);
-
+#endif
   //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////

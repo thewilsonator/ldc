@@ -260,7 +260,9 @@ struct IndirectByvalRewrite : ABIRewrite {
     auto &attrs = arg.attrs;
     attrs.clear();
     attrs.addAttribute(LLAttribute::NoAlias);
+#if LDC_LLVM_VER < 2100
     attrs.addAttribute(LLAttribute::NoCapture);
+#endif
     if (auto alignment = DtoAlignment(arg.type))
       attrs.addAlignmentAttr(alignment);
   }

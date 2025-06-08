@@ -350,7 +350,10 @@ static void RemoveCall(CallBase *CB, const G2StackAnalysis &A) {
 
   // Remove the runtime call.
   if (A.CGNode) {
+    //FIXME: for LLVM21
+#if LDC_LLVM_VER < 2100
     A.CGNode->removeCallEdgeFor(*CB);
+#endif
   }
   static_cast<Instruction *>(CB)->eraseFromParent();
 }

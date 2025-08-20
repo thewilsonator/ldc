@@ -214,6 +214,10 @@ void funcDeclarationSemantic(Scope* sc, FuncDeclaration funcdecl)
     if (!sc || funcdecl.errors)
         return;
 
+    import dmd.timetrace;
+    timeTraceBeginEvent(TimeTraceEventType.sema1Function);
+    scope (exit) timeTraceEndEvent(TimeTraceEventType.sema1Function, funcdecl);
+
     funcdecl.cppnamespace = sc.namespace;
     funcdecl.parent = sc.parent;
     Dsymbol parent = funcdecl.toParent();

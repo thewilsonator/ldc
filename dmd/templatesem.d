@@ -83,6 +83,10 @@ void templateDeclarationSemantic(Scope* sc, TemplateDeclaration tempdecl)
     if (!sc)
         return;
 
+    import dmd.timetrace;
+    timeTraceBeginEvent(TimeTraceEventType.sema1TemplateDecl);
+    scope (exit) timeTraceEndEvent(TimeTraceEventType.sema1TemplateDecl, tempdecl);
+
     // Remember templates defined in module object that we need to know about
     if (sc._module && sc._module.ident == Id.object)
     {

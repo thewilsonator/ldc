@@ -900,24 +900,18 @@ void DtoVarDeclaration(VarDeclaration *vd) {
     LLType *lltype = DtoType(type); // void for noreturn
     if (lltype->isVoidTy()) {
       irLocal->value = getNullPtr();
-      return;
-    }
-
-    llvm::AllocaInst *allocainst;
-
-    if (type != vd->type) {
-      allocainst = DtoAlloca(type, vd->toChars());
     } else {
-      allocainst = DtoAlloca(vd, vd->toChars());
+      auto allocainst = type != vd->type ? DtoAlloca(type, vd->toChars())
+                                         : DtoAlloca(vd, vd->toChars());
+
+      irLocal->value = allocainst;
+      gIR->DBuilder.EmitLocalVariable(allocainst, vd);
+
+      // The lifetime of a stack variable starts from the
+      // point it is declared
+      gIR->funcGen().localVariableLifetimeAnnotator.addLocalVariable(
+          allocainst, DtoConstUlong(size(type)));
     }
-
-    irLocal->value = allocainst;
-
-    gIR->DBuilder.EmitLocalVariable(allocainst, vd);
-
-    // The lifetime of a stack variable starts from the point it is declared
-    gIR->funcGen().localVariableLifetimeAnnotator.addLocalVariable(
-        allocainst, DtoConstUlong(size(type)));
   }
 
   IF_LOG Logger::cout() << "llvm value for decl: " << *getIrLocal(vd)->value

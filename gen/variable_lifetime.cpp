@@ -52,13 +52,8 @@ void LocalVariableLifetimeAnnotator::addLocalVariable(llvm::AllocaInst *address,
   scopes.back().variables.emplace_back(size, address);
 
   // Emit lifetime start
-  irs.CreateCallOrInvoke(getLLVMLifetimeStartFn(),
-#if LDC_LLVM_VER >= 2100
-                         {address},
-#else
-                         {size, address},
-#endif
-                         "", true /*nothrow*/);
+  irs.CreateCallOrInvoke(getLLVMLifetimeStartFn(), {size, address}, "",
+                         true /*nothrow*/);
 }
 
 // Emits end-of-lifetime annotation for all variables in current scope.
@@ -72,14 +67,8 @@ void LocalVariableLifetimeAnnotator::popScope() {
 
     assert(address);
 
-    irs.CreateCallOrInvoke(getLLVMLifetimeEndFn(),
-#if LDC_LLVM_VER >= 2100
-                           {address},
-#else
-                           {size, address},
-#endif
-                           "", true /*nothrow*/);
-
+    irs.CreateCallOrInvoke(getLLVMLifetimeEndFn(), {size, address}, "",
+                           true /*nothrow*/);
   }
   scopes.pop_back();
 }
